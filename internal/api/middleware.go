@@ -74,7 +74,7 @@ func (a *App) recoverPanics(next http.Handler) http.Handler {
 				if v == http.ErrAbortHandler {
 					panic(v)
 				}
-				a.log.Error("panic while serving request", "panic", v, "method", r.Method, "path", r.URL.Path)
+				a.log.Error("panic while serving request", "panic", v, "method", r.Method, "path", logSafe(r.URL.Path))
 				writeInternal(w)
 			}
 		}()
@@ -99,9 +99,17 @@ func (a *App) logRequests(next http.Handler) http.Handler {
 		next.ServeHTTP(rec, r)
 		a.log.Info("request",
 			"method", r.Method,
-			"path", r.URL.Path,
+			"path", logSafe(r.URL.Path),
 			"status", rec.status,
 			"duration", time.Since(start).Round(time.Microsecond),
 		)
 	})
+}
+
+// logSafe strips line breaks from client-controlled values before they reach
+// the log. The path is URL-decoded, so "%0A" arrives as a real newline, and a
+// log consumer that doesn't quote values could be fed a forged log line.
+func logSafe(s string) string {
+	s = strings.ReplaceAll(s, "\n", "")
+	return strings.ReplaceAll(s, "\r", "")
 }

@@ -17,6 +17,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Dependabot updates for Go modules, GitHub Actions and the Docker base images.
 - CodeQL code scanning for the Go code and the GitHub Actions workflows.
 
+### Fixed
+
+- Line breaks in request paths are stripped before logging, so a crafted URL can't forge log lines.
+- The cart quantity is narrowed from `int64` to `int` only after its range check.
+- The Docker workflow now runs with a read-only token.
+
 ## [1.0.0] - 2026-11-24
 
 First release.

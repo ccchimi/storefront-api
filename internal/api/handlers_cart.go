@@ -39,8 +39,12 @@ func (a *App) handleAddToCart(w http.ResponseWriter, r *http.Request, user store
 	if !ok || productID < 1 {
 		fields["product_id"] = "must be a positive integer"
 	}
-	qty, ok := intField(body, "quantity")
-	if !ok || qty < minQuantity || qty > maxQuantity {
+	// Convert to int only inside the range check, so the narrowing from
+	// int64 can never overflow.
+	var qty int
+	if n, ok := intField(body, "quantity"); ok && n >= minQuantity && n <= maxQuantity {
+		qty = int(n)
+	} else {
 		fields["quantity"] = "must be an integer between 1 and 10"
 	}
 	if _, bad := fields["product_id"]; !bad {
@@ -59,7 +63,7 @@ func (a *App) handleAddToCart(w http.ResponseWriter, r *http.Request, user store
 		return
 	}
 
-	a.carts.Add(user.ID, productID, int(qty))
+	a.carts.Add(user.ID, productID, qty)
 	a.writeCart(w, r, user.ID)
 }
 
