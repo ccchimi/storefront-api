@@ -1,5 +1,7 @@
 # Storefront API
 
+[![CI](https://github.com/ccchimi/storefront-api/actions/workflows/ci.yml/badge.svg)](https://github.com/ccchimi/storefront-api/actions/workflows/ci.yml)
+
 A small online-store backend in Go: log in, browse products, fill a cart, check out, and look at past orders.
 
 The feature list is short on purpose. The interesting part is what happens when things go wrong: two people buying the last unit at once, a card that gets declined, a client that retries after a timeout, or an email vendor that takes five seconds to answer. Each of those cases is handled explicitly and covered by a test.
