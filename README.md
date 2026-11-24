@@ -1,6 +1,8 @@
 # Storefront API
 
 [![CI](https://github.com/ccchimi/storefront-api/actions/workflows/ci.yml/badge.svg)](https://github.com/ccchimi/storefront-api/actions/workflows/ci.yml)
+[![Go version](https://img.shields.io/github/go-mod/go-version/ccchimi/storefront-api)](go.mod)
+[![License: MIT](https://img.shields.io/github/license/ccchimi/storefront-api)](LICENSE)
 
 A small online-store backend in Go: log in, browse products, fill a cart, check out, and look at past orders.
 
