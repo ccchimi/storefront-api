@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/ccchimi/storefront-api/blob/main/CONTRIBUTING.md
     about: Setup, guidelines and how to send a change.
   - name: Report a security vulnerability
-    url: https://github.com/ccchimi/storefront-api/blob/main/SECURITY.md
-    about: Please don't open a public issue. Follow the security policy instead.
+    url: https://github.com/ccchimi/storefront-api/security/advisories/new
+    about: Please don't open a public issue. Report it privately instead.

@@ -11,7 +11,12 @@ Security fixes go into the latest release only.
 
 ## Reporting a vulnerability
 
-Please **don't open a public issue** for security problems. Email **xchimicasla@hotmail.com** instead, with:
+Please **don't open a public issue** for security problems. Instead, either:
+
+- use GitHub's private reporting: **[Report a vulnerability](https://github.com/ccchimi/storefront-api/security/advisories/new)** (preferred, the report stays private and we can work on the fix together), or
+- email **xchimicasla@hotmail.com**.
+
+Either way, include:
 
 - what the problem is and what an attacker could do with it,
 - the steps or requests to reproduce it (`curl` commands are ideal),
