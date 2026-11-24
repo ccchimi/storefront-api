@@ -1,0 +1,7 @@
+# Keep LF line endings everywhere, whatever the contributor's OS or
+# core.autocrlf setting. gofmt and the CI formatting check expect LF.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.db  binary
