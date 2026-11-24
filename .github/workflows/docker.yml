@@ -1,0 +1,34 @@
+name: Docker
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build image
+        run: docker build --build-arg VERSION="${GITHUB_REF_NAME}" -t storefront-api:ci .
+
+      # Building isn't enough: start the container and make sure it actually
+      # serves requests and can write its database to the volume.
+      - name: Smoke test
+        run: |
+          docker run -d --name api -p 8000:8000 -v storefront-data:/data storefront-api:ci
+          for i in $(seq 1 30); do
+            curl -fs localhost:8000/healthz && break
+            sleep 1
+          done
+          curl -fs localhost:8000/healthz
+          curl -fs "localhost:8000/api/products?q=mug"
+          curl -fs localhost:8000/api/auth/login \
+            -d '{"email": "alice@storefront.test", "password": "password123"}' > /dev/null
+
+      - name: Container logs
+        if: always()
+        run: docker logs api || true

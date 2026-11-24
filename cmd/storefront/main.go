@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -17,12 +18,21 @@ import (
 	"github.com/ccchimi/storefront-api/internal/payment"
 )
 
+// version is set at build time with -ldflags "-X main.version=v1.2.3".
+var version = "dev"
+
 func main() {
 	addr := flag.String("addr", envOr("ADDR", ":8000"), "address to listen on")
 	dbPath := flag.String("db", envOr("DB_PATH", "storefront.db"), "path to the SQLite database file")
+	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	if *showVersion {
+		fmt.Println("storefront", version)
+		return
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil)).With("version", version)
 	if err := run(*addr, *dbPath, logger); err != nil {
 		logger.Error("server stopped", "err", err)
 		os.Exit(1)
