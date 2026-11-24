@@ -255,6 +255,87 @@ Errors share one shape:
 | `422`  | Idempotency key reused for a different cart |
 | `429`  | Rate limited; `Retry-After` says how many seconds to wait |
 
+## Architecture
+
+One Go process serves the API. Handlers in `internal/api` hold the HTTP concerns and the checkout flow; everything below them knows nothing about HTTP. State that doesn't need to survive a restart (carts, cache, limiters, locks) lives in memory on the `App`; orders, sessions and idempotency keys live in SQLite. The payment provider and the email vendor sit behind small interfaces, so tests swap them for fakes.
+
+```mermaid
+flowchart LR
+    client([HTTP client])
+
+    subgraph app["storefront process"]
+        direction LR
+        mw["Middleware<br/>recover, logging, body limit, auth"]
+        handlers["Handlers + checkout flow<br/>internal/api"]
+
+        subgraph mem["In-memory state, per App"]
+            carts["Carts"]
+            cache["Product cache"]
+            limits["Rate limiters"]
+            locks["Product locks"]
+        end
+
+        store["Store<br/>internal/store"]
+        worker["Email sender<br/>background goroutines"]
+    end
+
+    db[("SQLite<br/>WAL mode")]
+    pay["Payment provider<br/>payment.Gateway"]
+    vendor["Email vendor<br/>email.Sender"]
+
+    client --> mw
+    mw --> handlers
+    handlers --> mem
+    handlers --> store
+    store --> db
+    handlers -- "charge / refund" --> pay
+    handlers -- "after commit" --> worker
+    worker -- "send" --> vendor
+    worker -- "mark sent / failed" --> store
+```
+
+The checkout is where the pieces meet. This is the path of one request, including every way it can end:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant A as API
+    participant DB as SQLite
+    participant P as Payment provider
+    participant E as Email sender
+
+    C->>A: POST /api/checkout with Idempotency-Key
+    A->>DB: reserve (user, key)
+    alt key seen before
+        DB-->>A: existing record
+        A-->>C: stored response, or 409 if still running, or 422 if the cart differs
+    else new key
+        A->>A: validate cart, lock its products
+        A->>DB: read prices and stock
+        alt not enough stock
+            A->>DB: release key
+            A-->>C: 409, nothing charged
+        else stock available
+            A->>P: charge the total
+            alt declined
+                P-->>A: declined
+                A->>DB: release key
+                A-->>C: 402, nothing written
+            else approved
+                P-->>A: charge ID
+                A->>DB: one transaction: order, items, stock, invoice, email record
+                A->>DB: save response under the key
+                A-->>C: 201 with the order
+                A-)E: send confirmation
+                E->>DB: mark email as sent
+            end
+        end
+    end
+```
+
+Dependencies point one way: `api` uses the other packages, `store` only knows SQL and the domain types, and the leaf packages (`money`, `ratelimit`, `cart`, `payment`, `email`, `auth`) don't import anything from this repo except `money`.
+
 ## How the hard parts work
 
 ### Checkout is all-or-nothing
