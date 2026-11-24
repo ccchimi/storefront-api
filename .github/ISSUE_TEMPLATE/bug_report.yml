@@ -1,0 +1,70 @@
+name: Bug report
+description: Something doesn't work the way the README says it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. The more concrete the details, the faster it gets fixed.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: A short description of the problem.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Ideally the exact requests, as `curl` commands, starting from a fresh database.
+      placeholder: |
+        1. curl -s localhost:8000/api/auth/login -d '{"email": "alice@storefront.test", "password": "password123"}'
+        2. ...
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual response
+      description: Status code and response body, plus any related server log lines.
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `storefront -version`, or the commit you built from.
+      placeholder: v1.0.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: run-mode
+    attributes:
+      label: How are you running it?
+      options:
+        - go run / go build
+        - Release binary
+        - Docker
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Ubuntu 24.04, macOS 15, Windows 11...
