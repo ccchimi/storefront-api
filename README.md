@@ -187,3 +187,7 @@ The API tests (`internal/api/api_test.go`) start the full app on a real SQLite f
 - **Emails are sent in-process.** A crash between commit and delivery leaves the row as `queued`; an outbox worker that picks up queued rows on startup would make delivery fully reliable.
 - **Idempotency keys never expire.** A periodic cleanup of keys older than, say, 24 hours would keep the table small.
 - **No product admin endpoints.** The catalog comes from the seed data.
+
+## License
+
+[MIT](LICENSE)
