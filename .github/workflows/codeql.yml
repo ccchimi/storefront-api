@@ -1,0 +1,50 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # A weekly run catches issues found by newly added queries, even when the
+  # code hasn't changed.
+  schedule:
+    - cron: "23 6 * * 1"
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write # upload results to the Security tab
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: go
+            build-mode: manual
+          # The workflows themselves are code too: this checks them for
+          # things like script injection through untrusted inputs.
+          - language: actions
+            build-mode: none
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        if: matrix.language == 'go'
+        with:
+          go-version-file: go.mod
+
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-and-quality
+
+      - name: Build
+        if: matrix.build-mode == 'manual'
+        run: go build ./...
+
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}

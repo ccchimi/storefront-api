@@ -3,6 +3,7 @@
 [![CI](https://github.com/ccchimi/storefront-api/actions/workflows/ci.yml/badge.svg)](https://github.com/ccchimi/storefront-api/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ccchimi/storefront-api/badges/coverage.json)](https://github.com/ccchimi/storefront-api/actions/workflows/ci.yml)
 [![Docker](https://github.com/ccchimi/storefront-api/actions/workflows/docker.yml/badge.svg)](https://github.com/ccchimi/storefront-api/actions/workflows/docker.yml)
+[![CodeQL](https://github.com/ccchimi/storefront-api/actions/workflows/codeql.yml/badge.svg)](https://github.com/ccchimi/storefront-api/actions/workflows/codeql.yml)
 [![Go version](https://img.shields.io/github/go-mod/go-version/ccchimi/storefront-api)](go.mod)
 [![License: MIT](https://img.shields.io/github/license/ccchimi/storefront-api)](LICENSE)
 

@@ -15,6 +15,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Issue forms for bug reports and feature requests, and a pull request template.
 - Security policy.
 - Dependabot updates for Go modules, GitHub Actions and the Docker base images.
+- CodeQL code scanning for the Go code and the GitHub Actions workflows.
 
 ## [1.0.0] - 2026-11-24
 

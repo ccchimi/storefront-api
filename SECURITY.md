@@ -46,3 +46,4 @@ For context when reviewing:
 - Orders belonging to another user return `404`, so their existence isn't revealed.
 - Request bodies are capped at 1 MB, and the server has read, write and idle timeouts.
 - The Docker image is static, distroless and runs as a non-root user.
+- CodeQL scans the code on every push and weekly, and Dependabot watches the dependencies for known vulnerabilities.
