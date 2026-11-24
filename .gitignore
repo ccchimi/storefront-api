@@ -1,0 +1,15 @@
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+
+# Build output
+/bin/
+*.exe
+coverage.out
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
