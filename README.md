@@ -38,26 +38,180 @@ docker build -t storefront-api .
 docker run -p 8000:8000 -v storefront-data:/data storefront-api
 ```
 
-## Try it
+## Walkthrough with curl
+
+A full purchase from a fresh database, with the responses you should see. Start the server with `go run ./cmd/storefront` and run these from a second terminal. The examples use bash and [jq](https://jqlang.org/); on Windows, Git Bash or WSL work as-is.
+
+**1. Log in** and keep the token for the next requests:
 
 ```sh
-# Log in and keep the token
 TOKEN=$(curl -s localhost:8000/api/auth/login \
-  -d '{"email":"alice@storefront.test","password":"password123"}' | jq -r .token)
+  -d '{"email": "alice@storefront.test", "password": "password123"}' | jq -r .token)
+```
 
-curl -s "localhost:8000/api/products?q=keyboard"
+```json
+{
+  "token": "S42K4SW7KAZ4Y7NV2PMZUGXYCZ",
+  "expires_at": "2026-11-25T21:36:14Z",
+  "user": { "id": 1, "email": "alice@storefront.test", "name": "Alice" }
+}
+```
 
+**2. Search the catalog.** No token needed:
+
+```sh
+curl -s "localhost:8000/api/products?q=bottle"
+```
+
+```json
+{
+  "items": [
+    {
+      "id": 10, "name": "Water Bottle", "description": "Insulated steel, 750 ml",
+      "price_cents": 1999, "price": "19.99", "stock": 100, "in_stock": true
+    }
+  ]
+}
+```
+
+**3. Fill the cart.** Each call returns the whole cart:
+
+```sh
 curl -s localhost:8000/api/cart/items -H "Authorization: Bearer $TOKEN" \
   -d '{"product_id": 10, "quantity": 3}'
 
-# Safe to retry: the same key never charges twice
-curl -s -X POST localhost:8000/api/checkout -H "Authorization: Bearer $TOKEN" \
-  -H "Idempotency-Key: 7f9c2b1e-first-order"
-
-curl -s "localhost:8000/api/orders?page=1&limit=10" -H "Authorization: Bearer $TOKEN"
+curl -s localhost:8000/api/cart/items -H "Authorization: Bearer $TOKEN" \
+  -d '{"product_id": 1, "quantity": 1}'
 ```
 
-The simulated payment provider declines anything over $1,000. Add three ergonomic chairs (`product_id` 14) to the cart to see a `402`.
+```json
+{
+  "items": [
+    { "product_id": 1, "name": "Mechanical Keyboard", "unit_price_cents": 8999, "quantity": 1, "line_total_cents": 8999, "in_stock": true },
+    { "product_id": 10, "name": "Water Bottle", "unit_price_cents": 1999, "quantity": 3, "line_total_cents": 5997, "in_stock": true }
+  ],
+  "total_cents": 14996,
+  "total": "149.96"
+}
+```
+
+**4. Check out** with an idempotency key, so a retry can never charge twice:
+
+```sh
+curl -s -i -X POST localhost:8000/api/checkout -H "Authorization: Bearer $TOKEN" \
+  -H "Idempotency-Key: 7f9c2b1e-first-order"
+```
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{
+  "id": 1,
+  "status": "paid",
+  "total_cents": 14996,
+  "total": "149.96",
+  "item_count": 2,
+  "created_at": "2026-11-24T21:36:15.8999261Z",
+  "items": [
+    { "product_id": 1, "name": "Mechanical Keyboard", "unit_price_cents": 8999, "quantity": 1, "line_total_cents": 8999 },
+    { "product_id": 10, "name": "Water Bottle", "unit_price_cents": 1999, "quantity": 3, "line_total_cents": 5997 }
+  ],
+  "invoice": { "number": "INV-00000001", "amount_cents": 14996, "amount": "149.96", "issued_at": "2026-11-24T21:36:15.8999261Z" }
+}
+```
+
+A couple of seconds later the server log shows the confirmation email going out: `msg="email sent" to=alice@storefront.test subject="Your order #1 is confirmed"`.
+
+**5. Retry the same request,** as a client would after a timeout. The cart is empty by now, but the key still returns the original order, and nobody is charged again:
+
+```sh
+curl -s -i -X POST localhost:8000/api/checkout -H "Authorization: Bearer $TOKEN" \
+  -H "Idempotency-Key: 7f9c2b1e-first-order"
+```
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+Idempotent-Replayed: true
+
+{"id":1,"status":"paid","total_cents":14996, ... same body as before ...}
+```
+
+**6. Look at the order history:**
+
+```sh
+curl -s "localhost:8000/api/orders?page=1&limit=10" -H "Authorization: Bearer $TOKEN"
+curl -s localhost:8000/api/orders/1 -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "items": [
+    { "id": 1, "status": "paid", "total_cents": 14996, "total": "149.96", "item_count": 2, "created_at": "2026-11-24T21:36:15.8999261Z" }
+  ],
+  "page": 1,
+  "limit": 10,
+  "total": 1
+}
+```
+
+The second call returns the same order with its items and invoice, as in step 4. Logged in as Bob, `/api/orders/1` is a `404`.
+
+### When things go wrong
+
+**Invalid input** gets a `400` naming every bad field. Here the ID is a string and the quantity a decimal:
+
+```sh
+curl -s localhost:8000/api/cart/items -H "Authorization: Bearer $TOKEN" \
+  -d '{"product_id": "10", "quantity": 2.5}'
+```
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed",
+    "fields": {
+      "product_id": "must be a positive integer",
+      "quantity": "must be an integer between 1 and 10"
+    }
+  }
+}
+```
+
+**A declined card** gets a `402`, and nothing is written. The simulated provider declines anything over $1,000, so three ergonomic chairs will do it:
+
+```sh
+curl -s localhost:8000/api/cart/items -H "Authorization: Bearer $TOKEN" \
+  -d '{"product_id": 14, "quantity": 3}'
+curl -s -X POST localhost:8000/api/checkout -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{ "error": { "code": "PAYMENT_DECLINED", "message": "The payment was declined" } }
+```
+
+The cart is left as it was, the order history still shows one order, and the stock is unchanged.
+
+**Too many failed logins** lock the account for the rest of the 15-minute window, even with the right password:
+
+```sh
+for i in 1 2 3 4 5; do
+  curl -s -o /dev/null localhost:8000/api/auth/login \
+    -d '{"email": "bob@storefront.test", "password": "wrong"}'
+done
+curl -s -i localhost:8000/api/auth/login \
+  -d '{"email": "bob@storefront.test", "password": "password123"}'
+```
+
+```http
+HTTP/1.1 429 Too Many Requests
+Content-Type: application/json
+Retry-After: 899
+
+{"error":{"code":"RATE_LIMITED","message":"Too many requests, slow down"}}
+```
 
 ## API
 
