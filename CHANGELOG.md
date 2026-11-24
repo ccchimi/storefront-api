@@ -10,6 +10,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Added
 
 - This changelog.
+- Contributing guide.
 
 ## [1.0.0] - 2026-11-24
 

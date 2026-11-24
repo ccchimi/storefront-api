@@ -421,6 +421,10 @@ The API tests (`internal/api/api_test.go`) start the full app on a real SQLite f
 - **Idempotency keys never expire.** A periodic cleanup of keys older than, say, 24 hours would keep the table small.
 - **No product admin endpoints.** The catalog comes from the seed data.
 
+## Contributing
+
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and guidelines.
+
 ## License
 
 [MIT](LICENSE)
