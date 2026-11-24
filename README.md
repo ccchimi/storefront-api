@@ -260,21 +260,13 @@ Errors share one shape:
 One Go process serves the API. Handlers in `internal/api` hold the HTTP concerns and the checkout flow; everything below them knows nothing about HTTP. State that doesn't need to survive a restart (carts, cache, limiters, locks) lives in memory on the `App`; orders, sessions and idempotency keys live in SQLite. The payment provider and the email vendor sit behind small interfaces, so tests swap them for fakes.
 
 ```mermaid
-flowchart LR
-    client([HTTP client])
+flowchart TB
+    client(["HTTP client"])
 
-    subgraph app["storefront process"]
-        direction LR
+    subgraph app ["storefront process"]
         mw["Middleware<br/>recover, logging, body limit, auth"]
-        handlers["Handlers + checkout flow<br/>internal/api"]
-
-        subgraph mem["In-memory state, per App"]
-            carts["Carts"]
-            cache["Product cache"]
-            limits["Rate limiters"]
-            locks["Product locks"]
-        end
-
+        handlers["Handlers and checkout flow<br/>internal/api"]
+        mem["In-memory state, per App<br/>carts, product cache, rate limiters, product locks"]
         store["Store<br/>internal/store"]
         worker["Email sender<br/>background goroutines"]
     end
@@ -288,10 +280,10 @@ flowchart LR
     handlers --> mem
     handlers --> store
     store --> db
-    handlers -- "charge / refund" --> pay
-    handlers -- "after commit" --> worker
-    worker -- "send" --> vendor
-    worker -- "mark sent / failed" --> store
+    handlers -->|"charge / refund"| pay
+    handlers -->|"after commit"| worker
+    worker -->|"send"| vendor
+    worker -->|"mark sent / failed"| store
 ```
 
 The checkout is where the pieces meet. This is the path of one request, including every way it can end:
