@@ -8,6 +8,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # only used to publish the coverage badge from main
     steps:
       - uses: actions/checkout@v7
 
@@ -21,8 +23,34 @@ jobs:
       - name: Vet
         run: go vet ./...
 
-      - name: Test with the race detector
-        run: go test -race -count=1 ./...
+      # -coverpkg counts code exercised from any package's tests (the API tests
+      # cover most of internal/store, for example). covdata merges the runs
+      # properly; a plain -coverprofile would report those packages as 0%.
+      - name: Test with the race detector and coverage
+        run: |
+          mkdir -p coverage
+          go test -race -count=1 -cover -coverpkg=./internal/... ./... -args -test.gocoverdir="$PWD/coverage"
+          go tool covdata textfmt -i=coverage -o coverage.out
+          go tool cover -func=coverage.out | tail -n 1
 
       - name: Build
         run: go build ./cmd/storefront
+
+      # The badge reads a small JSON file from the "badges" branch through
+      # shields.io, so no third-party coverage service is needed.
+      - name: Publish coverage badge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          pct=$(go tool cover -func=coverage.out | awk '/^total:/ { sub("%", "", $3); print $3 }')
+          color=$(awk -v p="$pct" 'BEGIN { if (p >= 80) print "brightgreen"; else if (p >= 60) print "yellow"; else print "red" }')
+
+          mkdir badge && cd badge
+          git init -q -b badges
+          printf '{"schemaVersion":1,"label":"coverage","message":"%s%%","color":"%s"}\n' "$pct" "$color" > coverage.json
+          git add coverage.json
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -m "Coverage: ${pct}%"
+          git push -q --force "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" badges

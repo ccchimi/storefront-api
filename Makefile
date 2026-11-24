@@ -12,8 +12,11 @@ test:
 race:
 	go test -race ./...
 
+# Same measurement as CI: code exercised from any package's tests counts.
 cover:
-	go test -coverprofile=coverage.out ./...
+	rm -rf coverage && mkdir coverage
+	go test -cover -coverpkg=./internal/... ./... -args -test.gocoverdir="$(CURDIR)/coverage"
+	go tool covdata textfmt -i=coverage -o coverage.out
 	go tool cover -func=coverage.out
 
 vet:
